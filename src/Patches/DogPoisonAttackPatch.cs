@@ -10,6 +10,9 @@ internal static class DogPoisonAttackPatch
     private const float PoisonTickDamage = 1f;
     private const float PoisonTickIntervalSeconds = 1f;
     private const float PoisonDurationSeconds = 8f;
+    private const float MutatedPoisonTickDamage = 1.35f;
+    private const float MutatedPoisonTickIntervalSeconds = 1f;
+    private const float MutatedPoisonDurationSeconds = 10f;
     private const float PoisonCooldownSeconds = 0.75f;
 
     private static readonly Dictionary<int, float> lastPoisonByPlayer = new();
@@ -35,7 +38,7 @@ internal static class DogPoisonAttackPatch
             return;
         }
 
-        TryApplyPoison(player, $"MeleeSensor.OnTriggerEnter attacker={GetTransformPath(__instance.attackerTransform)} dog={dog.name}");
+        TryApplyPoison(player, dog, $"MeleeSensor.OnTriggerEnter attacker={GetTransformPath(__instance.attackerTransform)} dog={dog.name}");
     }
 
     [HarmonyPatch(
@@ -64,10 +67,10 @@ internal static class DogPoisonAttackPatch
             return;
         }
 
-        TryApplyPoison(__instance, $"Player.getHit attacker={GetTransformPath(attackerTransform)} dog={dog.name}");
+        TryApplyPoison(__instance, dog, $"Player.getHit attacker={GetTransformPath(attackerTransform)} dog={dog.name}");
     }
 
-    private static void TryApplyPoison(Player player, string source)
+    private static void TryApplyPoison(Player player, Dog dog, string source)
     {
         if (player.hasEffect(CharacterEffectType.poison))
         {
@@ -83,13 +86,13 @@ internal static class DogPoisonAttackPatch
         }
 
         lastPoisonByPlayer[playerId] = currentTime;
-        DarkwoodPlugin.AppendDebug($"Dog poison applied via {source} to player={player.name}");
-        DarkwoodPlugin.Log.LogInfo($"Dog poison applied via {source} to player={player.name}");
+        bool mutated = DogAggressionPatch.IsMutatedDog(dog);
+        DarkwoodPlugin.AppendVerboseDebug($"Dog poison applied via {source} to player={player.name}");
         player.effects.activate(
             CharacterEffectType.poison,
-            PoisonDurationSeconds,
-            PoisonTickDamage,
-            PoisonTickIntervalSeconds,
+            mutated ? MutatedPoisonDurationSeconds : PoisonDurationSeconds,
+            mutated ? MutatedPoisonTickDamage : PoisonTickDamage,
+            mutated ? MutatedPoisonTickIntervalSeconds : PoisonTickIntervalSeconds,
             0f);
     }
 
